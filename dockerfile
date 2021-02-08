@@ -1,3 +1,3 @@
 FROM "node"
 
-CMD [ "echo", "Hello", "World"]
+CMD [ "echo", "Hello", "GitHub Actions"]
