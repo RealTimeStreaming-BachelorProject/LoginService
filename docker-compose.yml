@@ -1,24 +1,31 @@
 version: "3"
 
 services:
-  # postgres:
-  #   image: postgres
-  #   restart: always
-  #   environment:
-  #     POSTGRES_USER: loginservice
-  #     POSTGRES_PASSWORD: Loginservice_database_password1
-  #     POSTGRES_DB: loginservice-database
-  #   ports:
-  #     - 5433:5342
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: loginservice
+      POSTGRES_PASSWORD: Loginservice_database_password1
+      POSTGRES_DB: loginservice-database
+    ports:
+      - 5432:5342
 
   loginservice:
     image: omvk97/bachelorloginservice
     container_name: loginservice
     restart: always
     environment:
-      LOGINSERVICE_POSTGRES_CONNECTION_STRING: "Host=192.168.50.65;Port=5432;Database=loginservice-database;Username=loginservice;Password=Loginservice_database_password1"
+      LOGINSERVICE_POSTGRES_CONNECTION_STRING: "Host=postgres;Port=5432;Database=loginservice-database;Username=loginservice;Password=Loginservice_database_password1"
+      LOGINSERVICE_PORT: 5005
       LOGINSERVICE_JWT_ISSUER: "https://localhost:5005"
       LOGINSERVICE_JWT_KEY: "developmentjwtkey"
-      LOGINSERVICE_PORT: 5005
     ports:
       - 5005:5005
+    depends_on:
+      - postgres
+
+networks:
+  default:
+    external:
+      name: "dev-network"
