@@ -1,16 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LoginService.Data;
-using LoginService.Data.DTOs.OutputDTOs;
 using LoginService.Data.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -103,7 +99,7 @@ namespace LoginService
                 {
                     DatabaseConnectStr =
                         "Host=localhost;Port=5432;Database=loginservice-database;Username=loginservice;Password=Loginservice_database_password1",
-                    JwtIssuerAuthorithy = "https://localhost:5000",
+                    JwtIssuerAuthorithy = "https://localhost:5005",
                     JwtKey = "developmentjwtkey"
                 };
             }
