@@ -10,6 +10,9 @@ services:
       POSTGRES_DB: loginservice-database
     ports:
       - 5432:5432
+    volumes:
+      # Inside postgres we can specify sql script which is run in alphabetical order. This script creates the database
+      - "./blankdatabasestartup.sql:/docker-entrypoint-initdb.d/init.sql"
 
   # loginservice:
   #   image: omvk97/bachelorloginservice

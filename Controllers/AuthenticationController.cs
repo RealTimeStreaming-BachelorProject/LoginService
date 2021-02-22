@@ -82,15 +82,6 @@ namespace LoginService.Controllers
         {
             try
             {
-                var user = await _userManager.FindByNameAsync(input.Username);
-                if (user != null) // User already exists
-                    return StatusCode(StatusCodes.Status400BadRequest, new GenericReturnMessageDTO
-                    {
-                        StatusCode = 400,
-                        Message = ErrorMessages.DriverAlreadyExists
-                    });
-
-                // create a new user
                 var newUser = new ApplicationUser { UserName = input.Username };
                 var result = await _userManager.CreateAsync(newUser, input.Password);
 

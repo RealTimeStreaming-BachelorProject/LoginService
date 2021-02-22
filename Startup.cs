@@ -154,7 +154,7 @@ namespace LoginService
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public async void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
         {
             if (env.IsDevelopment())
             {
@@ -167,7 +167,7 @@ namespace LoginService
                 });
             }
 
-            await UpdateDatabase(app, logger);
+            // await UpdateDatabase(app, logger);
 
             app.UseRouting();
 
