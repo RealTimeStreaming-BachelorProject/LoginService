@@ -46,16 +46,16 @@ services:
       volumes:
         - ./blankdatabasestartup.sql:/docker-entrypoint-initdb.d/init.sql
 
-#  loginservice:
-#    image: omvk97/loginservice
-#    container_name: loginservice
-#    restart: always
-#    environment:
-#      LOGINSERVICE_POSTGRES_CONNECTION_STRING: "Host=postgres;Port=5432;Database=loginservice-database;Username=loginservice;Password=Loginservice_database_password1"
-#      LOGINSERVICE_PORT: 5005
-#      LOGINSERVICE_JWT_ISSUER: "https://localhost:5005"
-#      LOGINSERVICE_JWT_KEY: "developmentjwtkey"
-#    ports:
-#      - 5005:5005
-#    depends_on:
-#      - postgres
+  loginservice:
+    image: omvk97/loginservice
+    container_name: loginservice
+    restart: always
+    environment:
+      LOGINSERVICE_POSTGRES_CONNECTION_STRING: "Host=postgres;Port=5432;Database=loginservice-database;Username=loginservice;Password=Loginservice_database_password1"
+      LOGINSERVICE_PORT: 5005
+      LOGINSERVICE_JWT_ISSUER: "https://localhost:5005"
+      LOGINSERVICE_JWT_KEY: "developmentjwtkey"
+    ports:
+      - 5005:5005
+    depends_on:
+      - postgres

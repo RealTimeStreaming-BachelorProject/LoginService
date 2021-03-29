@@ -1,3 +1,5 @@
+Build started...
+Build succeeded.
 CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
     "MigrationId" character varying(150) NOT NULL,
     "ProductVersion" character varying(32) NOT NULL,
@@ -93,6 +95,15 @@ CREATE UNIQUE INDEX "UserNameIndex" ON "AspNetUsers" ("NormalizedUserName");
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20210210074503_Init', '5.0.2');
+
+COMMIT;
+
+START TRANSACTION;
+
+ALTER TABLE "AspNetUsers" ADD "PasswordUpdateThing" text NULL;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20210329111425_EmulatePasswordChange', '5.0.2');
 
 COMMIT;
 

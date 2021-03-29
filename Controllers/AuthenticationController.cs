@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using LoginService.Contracts;
+using LoginService.Data;
 using LoginService.Data.DTOs.InputDTOs;
 using LoginService.Data.DTOs.OutputDTOs;
 using LoginService.Data.Models;
@@ -20,14 +21,16 @@ namespace LoginService.Controllers
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ApplicationUserRepo _userRepo;
 
         private static readonly SigningCredentials SigningCreds =
             new(Startup.SecurityKey, SecurityAlgorithms.HmacSha256);
 
         public AuthenticationController(UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+            SignInManager<ApplicationUser> signInManager, ApplicationUserRepo userRepo)
         {
             _signInManager = signInManager;
+            _userRepo = userRepo;
             _userManager = userManager;
         }
 
@@ -108,13 +111,14 @@ namespace LoginService.Controllers
             }
         }
 
-        [HttpPost("update")]
+        [HttpPatch]
         public async Task<ActionResult> ChangePassword(UpdateDTO input)
         {
             try
             {
-                var user = await _userManager.FindByNameAsync(input.Username);
-                if (user == null)
+                var userId = await _userRepo.UpdatePasswordEmulation(input.Username, input.NewPassword);
+                
+                if (userId == null)
                 {
                     return StatusCode(StatusCodes.Status401Unauthorized, new GenericReturnMessageDTO
                     {
@@ -123,25 +127,11 @@ namespace LoginService.Controllers
                     });
                 }
                 
-                var passwordChange = await _userManager.ChangePasswordAsync(user, input.OldPassword, input.NewPassword);
-                if (!passwordChange.Succeeded)
-                {
-                    foreach (var passwordChangeError in passwordChange.Errors)
-                    {
-                        Console.WriteLine(passwordChangeError.Description);
-                    }
-                    return StatusCode(StatusCodes.Status401Unauthorized, new GenericReturnMessageDTO
-                    {
-                        StatusCode = 401,
-                        Message = passwordChange.Errors
-                    });
-                }
-
                 return StatusCode(StatusCodes.Status200OK, new TokenResponseDTO
                 {
                     StatusCode = 200,
                     Message = SuccessMessages.PasswordUpdated,
-                    Token = CreateJwToken(user.UserName, user.Id)
+                    Token = CreateJwToken(input.Username, userId)
                 });
             }
             catch (Exception ex)

@@ -89,6 +89,7 @@ namespace LoginService
                         IssuerSigningKey = SecurityKey
                     };
                 });
+            services.AddScoped<ApplicationUserRepo>();
         }
 
         public EnvironmentVariables CheckEnvironmentVariables()
