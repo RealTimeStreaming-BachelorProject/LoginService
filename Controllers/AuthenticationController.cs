@@ -31,26 +31,29 @@ namespace LoginService.Controllers
             _userManager = userManager;
         }
 
-        private string createJWToken(string username, string driverID)
+        private static string CreateJwToken(string username, string driverId)
         {
             var claims = new[]
-                {
-                    new Claim("username", username),
-                    new Claim("driverID", driverID)
-                };
+            {
+                new Claim("username", username),
+                new Claim("driverID", driverId)
+            };
 
             var jwtIssuerAuthority = Startup.environmentVariables.JwtIssuerAuthorithy;
             var token = new JwtSecurityToken(jwtIssuerAuthority, jwtIssuerAuthority, claims,
                 signingCredentials: SigningCreds, expires: DateTime.Now.AddDays(30));
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+        
+        // TODO: Create request which can validate a JWT. It is important to validate users last password change up against the token creation time
 
         [HttpPost("login")]
         public async Task<ActionResult> Login(LoginDTO input)
         {
             try
             {
-                var signInResult = await _signInManager.PasswordSignInAsync(input.Username, input.Password, false, false);
+                var signInResult =
+                    await _signInManager.PasswordSignInAsync(input.Username, input.Password, false, false);
                 if (!signInResult.Succeeded)
                 {
                     return StatusCode(StatusCodes.Status401Unauthorized, new GenericReturnMessageDTO
@@ -66,15 +69,14 @@ namespace LoginService.Controllers
                 {
                     StatusCode = 200,
                     Message = SuccessMessages.DriverLoggedIn,
-                    Token = createJWToken(user.UserName, user.Id)
+                    Token = CreateJwToken(user.UserName, user.Id)
                 });
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex);
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
-
         }
 
         [HttpPost("register")]
@@ -82,7 +84,7 @@ namespace LoginService.Controllers
         {
             try
             {
-                var newUser = new ApplicationUser { UserName = input.Username };
+                var newUser = new ApplicationUser {UserName = input.Username};
                 var result = await _userManager.CreateAsync(newUser, input.Password);
 
                 if (!result.Succeeded)
@@ -96,10 +98,53 @@ namespace LoginService.Controllers
                 {
                     StatusCode = 201,
                     Message = SuccessMessages.DriverCreated,
-                    Token = createJWToken(newUser.UserName, newUser.Id)
+                    Token = CreateJwToken(newUser.UserName, newUser.Id)
                 });
             }
             catch (System.Exception ex)
+            {
+                Console.WriteLine(ex);
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        [HttpPost("update")]
+        public async Task<ActionResult> ChangePassword(UpdateDTO input)
+        {
+            try
+            {
+                var user = await _userManager.FindByNameAsync(input.Username);
+                if (user == null)
+                {
+                    return StatusCode(StatusCodes.Status401Unauthorized, new GenericReturnMessageDTO
+                    {
+                        StatusCode = 401,
+                        Message = ErrorMessages.IncorrectCredentials
+                    });
+                }
+                
+                var passwordChange = await _userManager.ChangePasswordAsync(user, input.OldPassword, input.NewPassword);
+                if (!passwordChange.Succeeded)
+                {
+                    foreach (var passwordChangeError in passwordChange.Errors)
+                    {
+                        Console.WriteLine(passwordChangeError.Description);
+                    }
+                    return StatusCode(StatusCodes.Status401Unauthorized, new GenericReturnMessageDTO
+                    {
+                        StatusCode = 401,
+                        Message = passwordChange.Errors
+                    });
+                }
+
+                return StatusCode(StatusCodes.Status200OK, new TokenResponseDTO
+                {
+                    StatusCode = 200,
+                    Message = SuccessMessages.PasswordUpdated,
+                    Token = CreateJwToken(user.UserName, user.Id)
+                });
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine(ex);
                 return StatusCode(StatusCodes.Status500InternalServerError);
