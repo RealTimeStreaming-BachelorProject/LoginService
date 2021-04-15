@@ -9,7 +9,6 @@ using LoginService.Data.DTOs.InputDTOs;
 using LoginService.Data.DTOs.OutputDTOs;
 using LoginService.Data.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
@@ -19,27 +18,22 @@ namespace LoginService.Controllers
     [Route("[controller]")]
     public class AuthenticationController : ControllerBase
     {
-        private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly ApplicationUserRepo _userRepo;
+        private readonly AuthRepo _authRepo;
 
         private static readonly SigningCredentials SigningCreds =
             new(Startup.SecurityKey, SecurityAlgorithms.HmacSha256);
 
-        public AuthenticationController(UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager, ApplicationUserRepo userRepo)
+        public AuthenticationController(AuthRepo authRepo)
         {
-            _signInManager = signInManager;
-            _userRepo = userRepo;
-            _userManager = userManager;
+            _authRepo = authRepo;
         }
 
-        private static string CreateJwToken(string username, string driverId)
+        private static string CreateJwToken(string username, Guid driverId)
         {
             var claims = new[]
             {
                 new Claim("username", username),
-                new Claim("driverID", driverId)
+                new Claim("driverID", driverId.ToString())
             };
 
             var jwtIssuerAuthority = Startup.environmentVariables.JwtIssuerAuthorithy;
@@ -47,7 +41,7 @@ namespace LoginService.Controllers
                 signingCredentials: SigningCreds, expires: DateTime.Now.AddDays(30));
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-        
+
         // TODO: Create request which can validate a JWT. It is important to validate users last password change up against the token creation time
 
         [HttpPost("login")]
@@ -55,9 +49,8 @@ namespace LoginService.Controllers
         {
             try
             {
-                var signInResult =
-                    await _signInManager.PasswordSignInAsync(input.Username, input.Password, false, false);
-                if (!signInResult.Succeeded)
+                var loggedInDriver = await _authRepo.Login(input);
+                if (loggedInDriver == null)
                 {
                     return StatusCode(StatusCodes.Status401Unauthorized, new GenericReturnMessageDTO
                     {
@@ -66,13 +59,11 @@ namespace LoginService.Controllers
                     });
                 }
 
-                var user = await _userManager.FindByNameAsync(input.Username);
-
                 return StatusCode(StatusCodes.Status200OK, new TokenResponseDTO
                 {
                     StatusCode = 200,
                     Message = SuccessMessages.DriverLoggedIn,
-                    Token = CreateJwToken(user.UserName, user.Id)
+                    Token = CreateJwToken(input.Username, loggedInDriver.Id)
                 });
             }
             catch (Exception ex)
@@ -87,21 +78,19 @@ namespace LoginService.Controllers
         {
             try
             {
-                var newUser = new ApplicationUser {UserName = input.Username};
-                var result = await _userManager.CreateAsync(newUser, input.Password);
-
-                if (!result.Succeeded)
+                var registeredDriver = await _authRepo.RegisterUser(input);
+                if (registeredDriver == null)
                     return StatusCode(StatusCodes.Status400BadRequest, new GenericReturnMessageDTO
                     {
                         StatusCode = 400,
-                        Message = result.Errors.Select(e => e.Description)
+                        Message = "Could not register user"
                     });
 
                 return StatusCode(StatusCodes.Status201Created, new TokenResponseDTO
                 {
                     StatusCode = 201,
                     Message = SuccessMessages.DriverCreated,
-                    Token = CreateJwToken(newUser.UserName, newUser.Id)
+                    Token = CreateJwToken(input.Username, registeredDriver.Id)
                 });
             }
             catch (System.Exception ex)
@@ -116,9 +105,10 @@ namespace LoginService.Controllers
         {
             try
             {
-                var userId = await _userRepo.UpdatePasswordEmulation(input.Username, input.NewPassword);
-                
-                if (userId == null)
+                var passwordUpdatedSuccessfully =
+                    await _authRepo.UpdatePasswordEmulation(input.Username, input.NewPassword);
+
+                if (!passwordUpdatedSuccessfully)
                 {
                     return StatusCode(StatusCodes.Status401Unauthorized, new GenericReturnMessageDTO
                     {
@@ -126,12 +116,11 @@ namespace LoginService.Controllers
                         Message = ErrorMessages.IncorrectCredentials
                     });
                 }
-                
-                return StatusCode(StatusCodes.Status200OK, new TokenResponseDTO
+
+                return StatusCode(StatusCodes.Status200OK, new GenericReturnMessageDTO
                 {
                     StatusCode = 200,
                     Message = SuccessMessages.PasswordUpdated,
-                    Token = CreateJwToken(input.Username, userId)
                 });
             }
             catch (Exception ex)

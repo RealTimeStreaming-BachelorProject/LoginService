@@ -1,13 +1,11 @@
 using System;
 using System.Text;
 using System.Threading.Tasks;
+using Cassandra;
 using LoginService.Data;
-using LoginService.Data.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -56,19 +54,6 @@ namespace LoginService
                 c.SwaggerDoc("v1", new OpenApiInfo {Title = "LoginService", Version = "v1"});
             });
 
-            services.AddDbContext<DataContext>(options =>
-            {
-                options.UseNpgsql(environmentVariables.DatabaseConnectStr, options => options.EnableRetryOnFailure(
-                    maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(5),
-                    errorCodesToAdd: null
-                ));
-            });
-
-            services.AddIdentity<ApplicationUser, IdentityRole>()
-                .AddEntityFrameworkStores<DataContext>()
-                .AddDefaultTokenProviders();
-
             // Adding Authentication  
             services.AddAuthentication(options =>
                 {
@@ -89,7 +74,14 @@ namespace LoginService
                         IssuerSigningKey = SecurityKey
                     };
                 });
-            services.AddScoped<ApplicationUserRepo>();
+            services.AddScoped<AuthRepo>();
+            
+            var cluster = Cluster.Builder()
+                .AddContactPoints("127.0.0.1")
+                .WithPort(9042)
+                .Build();
+
+            services.AddSingleton(cluster);
         }
 
         public EnvironmentVariables CheckEnvironmentVariables()
@@ -167,9 +159,6 @@ namespace LoginService
                     c.RoutePrefix = string.Empty;
                 });
             }
-
-            // await UpdateDatabase(app, logger);
-
             app.UseRouting();
 
             app.UseCors();
@@ -179,51 +168,6 @@ namespace LoginService
             app.UseAuthentication();
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
-        }
-
-        // Ensures an updated database to the latest migration
-        private static async Task UpdateDatabase(IApplicationBuilder app, ILogger<Startup> logger)
-        {
-            using var serviceScope = app.ApplicationServices
-                .GetRequiredService<IServiceScopeFactory>()
-                .CreateScope();
-
-            await using var context = serviceScope.ServiceProvider.GetService<DataContext>();
-            // Npgsql resiliency strategy does not work with Database.EnsureCreated() and Database.Migrate().
-            // Therefore a retry pattern is implemented for this purpose 
-            // if database connection is not ready it will retry 3 times before finally quiting
-            const int retryCount = 3;
-            var currentRetry = 0;
-            while (true)
-            {
-                try
-                {
-                    logger.LogInformation("Attempting database migration");
-
-                    context.Database.Migrate();
-
-                    logger.LogInformation("Database migration & connection successful");
-
-                    break; // just break if migration is successful
-                }
-                catch (Npgsql.NpgsqlException)
-                {
-                    logger.LogError("Database migration failed. Retrying in 5 seconds ...");
-
-                    currentRetry++;
-
-                    if (currentRetry == retryCount
-                    ) // Here it is possible to check the type of exception if needed with an OR. And exit if it's a specific exception.
-                    {
-                        // We have tried as many times as retryCount specifies. Now we throw it and exit the application
-                        logger.LogCritical($"Database migration failed after {retryCount} retries");
-                        throw;
-                    }
-                }
-
-                // Waiting 5 seconds before trying again
-                await Task.Delay(TimeSpan.FromSeconds(5));
-            }
         }
     }
 }

@@ -1,61 +1,29 @@
-version: "3"
+version: '2'
 
 services:
-#  yb-master:
-#    image: yugabytedb/yugabyte:latest
-#    container_name: yb-master-n1
-#    command: [ "/home/yugabyte/bin/yb-master",
-#               "--fs_data_dirs=/mnt/master",
-#               "--master_addresses=yb-master-n1:7100",
-#               "--rpc_bind_addresses=yb-master-n1:7100",
-#               "--replication_factor=1"]
-#    ports:
-#      - "7000:7000"
-#    environment:
-#      SERVICE_7000_NAME: yb-master
-#
-#  yb-tserver:
-#    image: yugabytedb/yugabyte:latest
-#    container_name: yb-tserver-n1
-#    command: [ "/home/yugabyte/bin/yb-tserver",
-#               "--fs_data_dirs=/mnt/tserver",
-#               "--start_pgsql_proxy",
-#               "--rpc_bind_addresses=yb-tserver-n1:9100",
-#               "--tserver_master_addrs=yb-master-n1:7100"]
-#    ports:
-#      - "9042:9042"
-#      - "5433:5433"
-#      - "9000:9000"
-#    environment:
-#      SERVICE_5433_NAME: ysql
-#      SERVICE_9042_NAME: ycql
-#      SERVICE_6379_NAME: yedis
-#      SERVICE_9000_NAME: yb-tserver
-#    depends_on:
-#      - yb-master
-        
-    postgres:
-      image: postgres
-      container_name: postgres-loginservice
-      ports:
-        - 5432:5432
-      environment:
-        POSTGRES_USER: loginservice
-        POSTGRES_PASSWORD: Loginservice_database_password1
-        POSTGRES_DB: loginservice-database
-      volumes:
-        - ./blankdatabasestartup.sql:/docker-entrypoint-initdb.d/init.sql
-
-  loginservice:
-    image: omvk97/loginservice
-    container_name: loginservice
-    restart: always
-    environment:
-      LOGINSERVICE_POSTGRES_CONNECTION_STRING: "Host=postgres;Port=5432;Database=loginservice-database;Username=loginservice;Password=Loginservice_database_password1"
-      LOGINSERVICE_PORT: 5005
-      LOGINSERVICE_JWT_ISSUER: "https://localhost:5005"
-      LOGINSERVICE_JWT_KEY: "developmentjwtkey"
+  yugabytedb:
+    image: yugabytedb/yugabyte:latest
+    container_name: yugabyte
+    command: [ "./bin/yugabyted", 
+               "start",
+               "--initial_scripts_dir=/docker-entrypoint-initdb.d",
+               "--daemon=false" ]
+    volumes:
+    - "./blankdatabasestartup.cql:/docker-entrypoint-initdb.d/init.cql"
     ports:
-      - 5005:5005
-    depends_on:
-      - postgres
+      - "7000:7000"
+      - "9000:9000"
+      - "5433:5433"
+      - "9042:9042"
+
+#  loginservice:
+#    image: omvk97/loginservice
+#    container_name: loginservice
+#    restart: always
+#    environment:
+#      LOGINSERVICE_POSTGRES_CONNECTION_STRING: "Host=postgres;Port=5432;Database=loginservice-database;Username=loginservice;Password=Loginservice_database_password1"
+#      LOGINSERVICE_PORT: 5005
+#      LOGINSERVICE_JWT_ISSUER: "https://localhost:5005"
+#      LOGINSERVICE_JWT_KEY: "developmentjwtkey"
+#    ports:
+#      - 5005:5005
