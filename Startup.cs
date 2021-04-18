@@ -51,7 +51,7 @@ namespace LoginService
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo {Title = "LoginService", Version = "v1"});
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "LoginService", Version = "v1" });
             });
 
             // Adding Authentication  
@@ -75,10 +75,10 @@ namespace LoginService
                     };
                 });
             services.AddScoped<AuthRepo>();
-            
+
             var cluster = Cluster.Builder()
-                .AddContactPoints("127.0.0.1")
-                .WithPort(9042)
+                .AddContactPoints(environmentVariables.DatabaseHost)
+                .WithPort(environmentVariables.DatabasePort)
                 .Build();
 
             services.AddSingleton(cluster);
@@ -90,8 +90,8 @@ namespace LoginService
             {
                 return new EnvironmentVariables
                 {
-                    DatabaseConnectStr =
-                        "Host=localhost;Port=5432;Database=loginservice-database;Username=loginservice;Password=Loginservice_database_password1",
+                    DatabaseHost = "127.0.0.1",
+                    DatabasePort = 9042,
                     JwtIssuerAuthorithy = "https://localhost:5005",
                     JwtKey = "developmentjwtkey"
                 };
@@ -100,12 +100,13 @@ namespace LoginService
             Console.ForegroundColor = ConsoleColor.Red;
 
             // environment variables check
-            var connectionString = Environment.GetEnvironmentVariable("LOGINSERVICE_POSTGRES_CONNECTION_STRING");
-            if (connectionString == null)
+            var connectionHost = Environment.GetEnvironmentVariable("LOGINSERVICE_DATABASE_HOST");
+            if (connectionHost == null)
             {
-                Console.WriteLine("'LOGINSERVICE_POSTGRES_CONNECTION_STRING' Database Connection string not found");
+                Console.WriteLine("'LOGINSERVICE_DATABASE_HOST' environment variable not found");
                 Environment.Exit(1);
             }
+            var connectionPort = int.Parse(Environment.GetEnvironmentVariable("LOGINSERVICE_DATABASE_PORT"));
 
             var jwtIssuerAuthorithy = Environment.GetEnvironmentVariable("LOGINSERVICE_JWT_ISSUER");
             if (jwtIssuerAuthorithy == null)
@@ -133,7 +134,8 @@ namespace LoginService
             Console.ResetColor();
             return new EnvironmentVariables
             {
-                DatabaseConnectStr = connectionString,
+                DatabaseHost = connectionHost,
+                DatabasePort = connectionPort,
                 JwtIssuerAuthorithy = jwtIssuerAuthorithy,
                 JwtKey = jwtKey
             };
@@ -141,7 +143,8 @@ namespace LoginService
 
         public struct EnvironmentVariables
         {
-            public string DatabaseConnectStr { get; init; }
+            public string DatabaseHost { get; init; }
+            public int DatabasePort { get; init; }
             public string JwtIssuerAuthorithy { get; init; }
             public string JwtKey { get; init; }
         }
