@@ -67,8 +67,9 @@ namespace LoginService.Data
                     PasswordUpdateEmulation = "start"
                 };
             }
-            catch (InvalidQueryException)
+            catch (InvalidQueryException e)
             {
+                Console.WriteLine(e);
                 return null;
             }
             finally
@@ -102,8 +103,9 @@ namespace LoginService.Data
                     PasswordUpdateEmulation = driverRow.GetValue<string>("passwordUpdateEmulation".ToLower())
                 };
             }
-            catch (InvalidQueryException)
+            catch (InvalidQueryException e) 
             {
+                Console.WriteLine(e);
                 return null;
             }
 
@@ -126,6 +128,7 @@ namespace LoginService.Data
             }
             catch (InvalidQueryException e)
             {
+                Console.WriteLine(e);
                 return null;
             }
         }
